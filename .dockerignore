@@ -1,0 +1,9 @@
+.git
+.github
+.claude
+var
+node_modules
+.env
+.env.*
+*.md
+docker-compose.prod.yml

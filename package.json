@@ -1,0 +1,10 @@
+{
+  "name": "fujiyama-etoile",
+  "private": true,
+  "description": "Site et espace admin du restaurant Fujiyama Étoile",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server/server.js",
+    "hash-password": "node server/hash-password.js"
+  }
+}

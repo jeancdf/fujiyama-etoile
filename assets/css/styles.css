@@ -49,6 +49,16 @@ p { margin: 0; }
 
 .container { max-width: var(--container); margin: 0 auto; padding-inline: var(--gutter); }
 
+[hidden] { display: none !important; }
+
+/* Message temporaire (géré depuis l'admin) et bandeau d'aperçu */
+.announce { background: var(--accent); color: #fff; font-size: 0.9375rem; font-weight: 500; text-align: center; }
+.announce .container { padding-block: 10px; }
+.preview-ribbon {
+  position: sticky; top: 0; z-index: 70; background: #D98A1C; color: var(--ink);
+  text-align: center; font-weight: 700; font-size: 0.875rem; padding: 6px 12px;
+}
+
 .skip-link {
   position: absolute; left: 8px; top: -48px; z-index: 100;
   background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: var(--radius);

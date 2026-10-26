@@ -1,0 +1,18 @@
+name: fujiyama-etoile
+
+services:
+  app:
+    build: .
+    image: fujiyama-etoile:latest
+    container_name: fujiyama-etoile
+    restart: unless-stopped
+    env_file: .env
+    # Pas encore de nom de domaine : le site est servi en HTTP sur ce port.
+    # Avec un domaine, retirer ce port et passer par le Caddy du serveur (HTTPS).
+    ports:
+      - "8095:3000"
+    volumes:
+      - fujiyama_data:/data
+
+volumes:
+  fujiyama_data:
