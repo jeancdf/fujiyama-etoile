@@ -1,0 +1,132 @@
+name: Vérifier et déployer
+
+# À chaque push sur main : on vérifie le code, puis on l'envoie sur le VPS OVH
+# et on reconstruit le conteneur. Le déploiement ne part que si la vérification passe.
+# Les données du restaurant (carte, photos, historique) sont dans un volume Docker :
+# un déploiement ne les touche jamais.
+#
+# Secrets du dépôt (Settings > Secrets and variables > Actions) :
+#   VPS_HOST         adresse du serveur
+#   VPS_USER         utilisateur SSH autorisé à lancer docker
+#   VPS_SSH_KEY      clé privée SSH dédiée à ce dépôt
+#   VPS_KNOWN_HOSTS  empreinte du serveur (sortie de ssh-keyscan), pour refuser un faux serveur
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Deux déploiements ne tournent jamais en même temps.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  verifier:
+    name: Vérifier
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Syntaxe et données
+        run: |
+          for f in server/*.js assets/js/main.js admin/admin.js; do node --check "$f"; done
+          node -e "
+            const { validateSite } = require('./server/validate');
+            const r = validateSite(require('./data/site.json'));
+            if (r.error) { console.error('data/site.json invalide : ' + r.error); process.exit(1); }
+            console.log('data/site.json valide');
+          "
+
+      - name: Démarrer le serveur et l'interroger
+        run: |
+          export ADMIN_PASSWORD_HASH="$(node server/hash-password.js "mot-de-passe-de-test-ci")"
+          export SESSION_SECRET="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+          export PORT=3000 DATA_DIR="$RUNNER_TEMP/data"
+          node server/server.js &
+          for i in $(seq 1 15); do curl -fsS http://127.0.0.1:3000/api/health && break; sleep 1; done
+          set -e
+          for p in / /menus.html /admin/ /data/site.json; do curl -fsS -o /dev/null "http://127.0.0.1:3000$p"; done
+          # Fichiers privés : doivent rester introuvables.
+          for p in /server/server.js /package.json /.git/config; do
+            test "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3000$p")" = 404
+          done
+          # Sans session, l'API d'écriture refuse.
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'X-Fujiyama: 1' -H 'Content-Type: application/json' -d '{}' http://127.0.0.1:3000/api/draft)" = 401
+          echo "Serveur OK"
+
+  deployer:
+    name: Déployer sur le VPS
+    needs: verifier
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # toJSON garde la clé sur une seule ligne : collée telle quelle dans `env:`,
+      # une clé peut arriver coupée au premier saut de ligne.
+      - name: Préparer la connexion SSH
+        env:
+          SSH_KEY_JSON: ${{ toJSON(secrets.VPS_SSH_KEY) }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          python3 <<'PY'
+          import json, os, pathlib, sys
+          key = (json.loads(os.environ.get("SSH_KEY_JSON") or '""') or "").replace("\r", "").strip()
+          if "\n" not in key:
+              key = key.replace("\\n", "\n")
+          if "PRIVATE KEY" not in key:
+              sys.exit("Le secret VPS_SSH_KEY est vide ou n'est pas une clé privée.")
+          d = pathlib.Path.home() / ".ssh"
+          d.mkdir(mode=0o700, exist_ok=True)
+          (d / "deploy").write_text(key + "\n", encoding="utf-8")
+          (d / "deploy").chmod(0o600)
+          hosts = (os.environ.get("KNOWN_HOSTS") or "").replace("\r", "").strip()
+          if not hosts:
+              sys.exit("Le secret VPS_KNOWN_HOSTS est vide.")
+          (d / "known_hosts").write_text(hosts + "\n", encoding="utf-8")
+          PY
+
+      - name: Envoyer le code et relancer le conteneur
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          SSH_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          HOST="$(printf %s "$HOST" | tr -d '[:space:]')"
+          SSH_USER="$(printf %s "$SSH_USER" | tr -d '[:space:]')"
+          SSH=(ssh -i "$HOME/.ssh/deploy" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes "$SSH_USER@$HOST")
+
+          # Le code part en archive : le serveur n'a besoin ni de git ni d'accès à GitHub.
+          git archive --format=tar HEAD | "${SSH[@]}" "rm -rf ~/fujiyama-etoile/app.new && mkdir -p ~/fujiyama-etoile/app.new && tar -x -C ~/fujiyama-etoile/app.new"
+
+          "${SSH[@]}" bash -s <<'REMOTE'
+          set -euo pipefail
+          cd ~/fujiyama-etoile
+          test -f .env || { echo "~/fujiyama-etoile/.env manquant sur le serveur (voir README)." >&2; exit 1; }
+          rm -rf app.old
+          if [ -d app ]; then mv app app.old; fi
+          mv app.new app
+          cp .env app/.env
+          cd app
+          docker compose -f docker-compose.prod.yml up -d --build
+          for i in $(seq 1 20); do
+            if docker exec fujiyama-etoile wget -qO- http://127.0.0.1:3000/api/health > /dev/null 2>&1; then
+              echo "Site en ligne."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Le conteneur ne répond pas." >&2
+          docker logs --tail 50 fujiyama-etoile >&2 || true
+          exit 1
+          REMOTE
