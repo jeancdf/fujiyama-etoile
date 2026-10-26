@@ -60,23 +60,31 @@ Site : http://localhost:8766 · Admin : http://localhost:8766/admin/
 
 ## Déploiement (serveur OVH)
 
-Le serveur fait tourner le site dans un conteneur Docker, en HTTP sur le port **8095**
-(pas encore de nom de domaine) : http://vps-a33d7e65.vps.ovh.net:8095
+En ligne sur **https://fujiyama-proto.duckdns.org** (admin : `/admin/`).
 
-```bash
-./deploy.sh
-```
+Le site tourne dans un conteneur Docker sur le VPS. Le HTTPS est assuré par le Caddy partagé du serveur,
+configuré dans le dépôt `qr-code` (`docker-compose.prod.yml`, bloc `caddyfile`) : le conteneur
+`fujiyama-etoile` est sur le réseau `cv-proxy` et Caddy le joint par son nom. Le port 8095 n'écoute
+que sur le serveur lui-même (vérifications).
 
-Le script envoie le dernier commit, reconstruit le conteneur et vérifie qu'il répond.
-Les données du restaurant ne sont jamais écrasées.
+**Automatique** : chaque push sur `main` lance `.github/workflows/deploy.yml`, qui vérifie le code
+(syntaxe, validité de `data/site.json`, serveur démarré et interrogé), puis l'envoie sur le VPS et
+reconstruit le conteneur. Si la vérification échoue, rien n'est déployé.
 
-Les secrets sont dans `~/fujiyama-etoile/.env` sur le serveur (droits 600), valeurs entre apostrophes
+Secrets GitHub utilisés : `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (clé dédiée à ce dépôt,
+commentée `github-actions-fujiyama-etoile` dans `~/.ssh/authorized_keys` de `deploy` : supprimer
+cette ligne la révoque) et `VPS_KNOWN_HOSTS` (empreinte du serveur).
+
+**Manuel** (secours) : `./deploy.sh` fait la même chose depuis ton poste.
+
+Les données du restaurant (volume `fujiyama_data`) ne sont jamais écrasées par un déploiement.
+
+Les secrets de l'app sont dans `~/fujiyama-etoile/.env` sur le serveur (droits 600), valeurs entre apostrophes
 car les empreintes contiennent des `$`. Pour changer le mot de passe admin : générer une nouvelle empreinte
-avec `server/hash-password.js`, la remplacer dans ce fichier, puis relancer `./deploy.sh`.
+avec `server/hash-password.js`, la remplacer dans ce fichier, puis redéployer.
 
-**Avec un nom de domaine** : retirer le port 8095 du compose, brancher le conteneur sur le réseau du Caddy
-du serveur et ajouter le domaine au Caddyfile pour avoir le HTTPS. Tant que le site est en HTTP,
-le mot de passe admin circule en clair : à éviter sur un Wi-Fi public.
+**Vrai nom de domaine** : faire pointer son enregistrement A vers 51.210.109.16 et remplacer
+`fujiyama-proto.duckdns.org` dans le Caddyfile du dépôt `qr-code`.
 
 ## Démo GitHub Pages
 
