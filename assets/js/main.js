@@ -198,11 +198,9 @@
     }).join('');
 
     sections.innerHTML = MENUS.map(function (c) {
-      var cover = c.items[0] && c.items[0].img;
       var note = A_LA_CARTE.indexOf(c.id) !== -1 ? t.aLaCarte : t.setNote;
       return '<section class="menu-cat" id="' + c.id + '" aria-labelledby="h-' + c.id + '">' +
         '<div class="menu-cat__banner">' +
-          (cover ? '<img src="' + esc(cover) + '" alt="" width="200" height="120" loading="lazy">' : '') +
           '<div><h2 id="h-' + c.id + '">' + esc(catLabel(c)) + '</h2><p>' + esc(note) + '</p></div>' +
         '</div>' +
         '<ul class="menu-list">' + c.items.map(function (it, i) {
@@ -210,13 +208,15 @@
           return '<li class="menu-item">' +
             (it.img
               ? '<button type="button" class="zoom" data-zoom="' + c.id + ':' + i + '" aria-label="' + esc(t.enlarge + ' ' + it.name) + '">' +
-                  '<img src="' + esc(it.img) + '" alt="" width="150" height="96" loading="lazy">' +
-                  '<span class="zoom__icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/></svg></span>' +
+                  '<img src="' + esc(it.img) + '" alt="" width="640" height="410" loading="lazy">' +
+                  '<span class="zoom__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/></svg></span>' +
                 '</button>'
-              : '<span></span>') +
-            '<div><div class="menu-item__name">' + esc(it.name) + (it.pour2 ? ' <span class="badge">' + t.for2 + '</span>' : '') + '</div>' +
-            (desc ? '<div class="menu-item__desc">' + esc(desc) + '</div>' : '') + '</div>' +
-            '<span class="menu-item__price">' + price(it.price) + '</span>' +
+              : '') +
+            '<div class="menu-item__body">' +
+              '<div class="menu-item__top"><div class="menu-item__name">' + esc(it.name) + (it.pour2 ? ' <span class="badge">' + t.for2 + '</span>' : '') + '</div>' +
+              '<span class="menu-item__price">' + price(it.price) + '</span></div>' +
+              (desc ? '<div class="menu-item__desc">' + esc(desc) + '</div>' : '') +
+            '</div>' +
           '</li>';
         }).join('') + '</ul></section>';
     }).join('');
