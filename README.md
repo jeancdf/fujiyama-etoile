@@ -39,3 +39,9 @@ ainsi que dans le tableau des horaires de `index.html` et le JSON-LD en tête de
 - Mentions légales (obligatoires) et page allergènes.
 - Le plan Google Maps intégré dépose des cookies tiers : prévoir un bandeau de consentement ou une image statique cliquable.
 - Les descriptions anglaises viennent du site actuel et ont été légèrement corrigées ; une relecture reste utile.
+
+## Démo GitHub Pages
+
+Une démo est publiée sur https://jeancdf.github.io/fujiyama-etoile/ (chaque push sur `main` la met à jour).
+Elle porte une balise `noindex` dans `index.html` et `menus.html` pour ne pas être référencée par Google :
+**la retirer avant la mise en production** sur fujiyamaetoile.fr.
