@@ -22,7 +22,6 @@ rm -rf app.old; [ -d app ] && mv app app.old; mv app.new app
 cp .env app/.env
 cd app
 docker compose -f docker-compose.prod.yml up -d --build
-docker image prune -f >/dev/null
 EOF
 
 echo "→ Vérification"
