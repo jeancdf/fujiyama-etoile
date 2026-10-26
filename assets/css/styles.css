@@ -218,6 +218,7 @@ p { margin: 0; }
   display: flex; flex-direction: column; overflow: hidden;
   background: var(--card); border: 1px solid #E3D9CA; border-radius: var(--radius);
 }
+.card .zoom { width: 100%; border-radius: 0; }
 .card img { width: 100%; aspect-ratio: 64 / 41; object-fit: cover; background: var(--paper-2); }
 .card__body { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px 20px; flex-grow: 1; }
 .card__top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
@@ -315,8 +316,44 @@ p { margin: 0; }
 .menu-cat__banner p { color: var(--muted-on-ink); font-size: 0.9375rem; }
 
 .menu-list { list-style: none; margin: 0; padding: 0; }
-.menu-item { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; gap: 20px; align-items: center; padding: 16px 4px; border-bottom: 1px solid var(--line); }
-.menu-item img { width: 88px; height: 64px; object-fit: cover; border-radius: 4px; background: var(--paper-2); }
+.menu-item { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 24px; align-items: center; padding: 16px 4px; border-bottom: 1px solid var(--line); }
+.menu-item img { width: 150px; height: 96px; object-fit: cover; border-radius: 4px; background: var(--paper-2); transition: transform .2s; }
+
+/* Miniature cliquable → visionneuse */
+.zoom {
+  position: relative; display: block; padding: 0; border: 0; background: none; cursor: zoom-in;
+  border-radius: 4px; overflow: hidden;
+}
+.zoom:hover img { transform: scale(1.04); }
+.zoom__icon {
+  position: absolute; right: 6px; bottom: 6px; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center; background: rgba(21, 18, 15, 0.72); color: #fff;
+  opacity: 0; transition: opacity .15s;
+}
+.zoom:hover .zoom__icon, .zoom:focus-visible .zoom__icon { opacity: 1; }
+@media (hover: none) { .zoom__icon { opacity: 1; width: 24px; height: 24px; } }
+
+.lightbox {
+  width: min(960px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; border: 0;
+  border-radius: 8px; background: var(--ink); color: var(--paper); overflow: hidden;
+}
+.lightbox::backdrop { background: rgba(21, 18, 15, 0.82); }
+.lightbox__figure { margin: 0; display: flex; flex-direction: column; }
+.lightbox__figure img { width: 100%; max-height: calc(100vh - 170px); object-fit: contain; background: #000; }
+.lightbox__caption { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 16px 64px 18px 20px; }
+.lightbox__name { font-family: var(--font-display); font-size: 1.375rem; font-weight: 800; }
+.lightbox__desc { color: var(--muted-on-ink); font-size: 0.9375rem; margin-top: 2px; }
+.lightbox__price { font-family: var(--font-display); font-size: 1.375rem; font-weight: 800; color: var(--accent-on-ink); white-space: nowrap; }
+.lightbox__btn {
+  position: absolute; width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer;
+  display: grid; place-items: center; background: rgba(21, 18, 15, 0.7); color: #fff;
+}
+.lightbox__btn:hover { background: var(--accent); }
+.lightbox__close { top: 12px; right: 12px; }
+.lightbox__prev, .lightbox__next { top: calc((100% - 80px) / 2 - 24px); }
+.lightbox__prev { left: 12px; }
+.lightbox__next { right: 12px; }
+.lightbox__count { position: absolute; left: 16px; top: 22px; font-size: 0.8125rem; background: rgba(21, 18, 15, 0.7); padding: 4px 10px; border-radius: 999px; }
 .menu-item__name { font-weight: 700; font-size: 1.0625rem; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .menu-item__desc { font-size: 0.9375rem; color: var(--text-2); }
 .menu-item__price { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; white-space: nowrap; }
@@ -339,6 +376,12 @@ p { margin: 0; }
   .menu-cat { scroll-margin-top: 150px; padding-top: 24px; }
   .menu-cat__banner img { width: 120px; height: 96px; }
   .menu-cat__banner h2 { font-size: 1.5rem; }
-  .menu-item { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 14px; }
-  .menu-item img { width: 64px; height: 56px; }
+  .menu-item { grid-template-columns: 104px minmax(0, 1fr) auto; gap: 14px; }
+  .menu-item img { width: 104px; height: 76px; }
+  .lightbox__caption { flex-direction: column; gap: 6px; padding-right: 20px; }
+}
+@media (max-width: 400px) {
+  .menu-item { grid-template-columns: 88px minmax(0, 1fr); }
+  .menu-item img { width: 88px; height: 68px; }
+  .menu-item__price { grid-column: 2; font-size: 1.125rem; }
 }

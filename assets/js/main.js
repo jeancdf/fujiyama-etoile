@@ -62,8 +62,8 @@
   var FR = {};
 
   var UI = {
-    fr: { open: 'Ouvert · ferme à ', opens: 'Fermé · ouvre à ', opensTomorrow: 'Fermé · ouvre demain à ', setNote: 'Servi avec soupe, crudité et riz', aLaCarte: 'À la carte', for2: 'Pour 2' },
-    en: { open: 'Open · closes at ', opens: 'Closed · opens at ', opensTomorrow: 'Closed · opens tomorrow at ', setNote: 'Served with soup, salad and rice', aLaCarte: 'À la carte', for2: 'For 2' }
+    fr: { open: 'Ouvert · ferme à ', opens: 'Fermé · ouvre à ', opensTomorrow: 'Fermé · ouvre demain à ', setNote: 'Servi avec soupe, crudité et riz', aLaCarte: 'À la carte', for2: 'Pour 2', enlarge: 'Agrandir la photo :', close: 'Fermer', prev: 'Photo précédente', next: 'Photo suivante' },
+    en: { open: 'Open · closes at ', opens: 'Closed · opens at ', opensTomorrow: 'Closed · opens tomorrow at ', setNote: 'Served with soup, salad and rice', aLaCarte: 'À la carte', for2: 'For 2', enlarge: 'Enlarge photo:', close: 'Close', prev: 'Previous photo', next: 'Next photo' }
   };
 
   var FEATURED = ['Menu F1', 'Menu A1', 'Menu Bateau', 'Menu Fujiyama 1'];
@@ -148,7 +148,10 @@
       featured.innerHTML = FEATURED.map(findItem).filter(Boolean).map(function (f) {
         var it = f.item;
         return '<article class="card">' +
-          '<img src="' + esc(it.img) + '" alt="' + esc(it.name) + '" width="640" height="410" loading="lazy">' +
+          '<button type="button" class="zoom" data-zoom="' + f.cat.id + ':' + f.cat.items.indexOf(it) + '" aria-label="' + esc(UI[lang].enlarge + ' ' + it.name) + '">' +
+            '<img src="' + esc(it.img) + '" alt="" width="640" height="410" loading="lazy">' +
+            '<span class="zoom__icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/></svg></span>' +
+          '</button>' +
           '<div class="card__body">' +
             '<div class="card__top"><h3>' + esc(it.name) + '</h3><span class="card__price">' + price(it.price) + '</span></div>' +
             '<span class="card__cat">' + esc(it.pour2 ? UI[lang].for2 : catLabel(f.cat)) + '</span>' +
@@ -202,10 +205,15 @@
           (cover ? '<img src="' + esc(cover) + '" alt="" width="200" height="120" loading="lazy">' : '') +
           '<div><h2 id="h-' + c.id + '">' + esc(catLabel(c)) + '</h2><p>' + esc(note) + '</p></div>' +
         '</div>' +
-        '<ul class="menu-list">' + c.items.map(function (it) {
+        '<ul class="menu-list">' + c.items.map(function (it, i) {
           var desc = itemDesc(it);
           return '<li class="menu-item">' +
-            (it.img ? '<img src="' + esc(it.img) + '" alt="" width="88" height="64" loading="lazy">' : '<span></span>') +
+            (it.img
+              ? '<button type="button" class="zoom" data-zoom="' + c.id + ':' + i + '" aria-label="' + esc(t.enlarge + ' ' + it.name) + '">' +
+                  '<img src="' + esc(it.img) + '" alt="" width="150" height="96" loading="lazy">' +
+                  '<span class="zoom__icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/></svg></span>' +
+                '</button>'
+              : '<span></span>') +
             '<div><div class="menu-item__name">' + esc(it.name) + (it.pour2 ? ' <span class="badge">' + t.for2 + '</span>' : '') + '</div>' +
             (desc ? '<div class="menu-item__desc">' + esc(desc) + '</div>' : '') + '</div>' +
             '<span class="menu-item__price">' + price(it.price) + '</span>' +
@@ -215,6 +223,76 @@
 
     watchSections();
   }
+
+  // ---------- Visionneuse photo ----------
+  var box = { el: null, cat: null, index: 0 };
+
+  function buildLightbox() {
+    var d = document.createElement('dialog');
+    d.className = 'lightbox';
+    d.innerHTML =
+      '<figure class="lightbox__figure"><img alt="" data-lb-img>' +
+        '<figcaption class="lightbox__caption"><div><div class="lightbox__name" data-lb-name></div><div class="lightbox__desc" data-lb-desc></div></div>' +
+        '<span class="lightbox__price" data-lb-price></span></figcaption></figure>' +
+      '<span class="lightbox__count" data-lb-count></span>' +
+      '<button type="button" class="lightbox__btn lightbox__close" data-lb-close><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>' +
+      '<button type="button" class="lightbox__btn lightbox__prev" data-lb-step="-1"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+      '<button type="button" class="lightbox__btn lightbox__next" data-lb-step="1"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>';
+    document.body.appendChild(d);
+
+    d.addEventListener('click', function (e) {
+      if (e.target === d || e.target.closest('[data-lb-close]')) return d.close();
+      var step = e.target.closest('[data-lb-step]');
+      if (step) showPhoto(box.index + parseInt(step.getAttribute('data-lb-step'), 10));
+    });
+    d.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft') showPhoto(box.index - 1);
+      if (e.key === 'ArrowRight') showPhoto(box.index + 1);
+    });
+    var startX = null;
+    d.addEventListener('touchstart', function (e) { startX = e.touches[0].clientX; }, { passive: true });
+    d.addEventListener('touchend', function (e) {
+      if (startX === null) return;
+      var dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 50) showPhoto(box.index + (dx < 0 ? 1 : -1));
+      startX = null;
+    });
+    box.el = d;
+  }
+
+  // Photos de la catégorie ouverte (les articles sans photo sont sautés).
+  function photos() { return box.cat.items.filter(function (it) { return it.img; }); }
+
+  function showPhoto(i) {
+    var list = photos(), n = list.length, t = UI[lang];
+    box.index = (i + n) % n;
+    var it = list[box.index], d = box.el;
+    d.querySelector('[data-lb-img]').src = it.img;
+    d.querySelector('[data-lb-img]').alt = it.name;
+    d.querySelector('[data-lb-name]').textContent = it.name;
+    d.querySelector('[data-lb-desc]').textContent = itemDesc(it);
+    d.querySelector('[data-lb-price]').textContent = price(it.price);
+    d.querySelector('[data-lb-count]').textContent = (box.index + 1) + ' / ' + n;
+    d.querySelector('[data-lb-close]').setAttribute('aria-label', t.close);
+    d.querySelector('.lightbox__prev').setAttribute('aria-label', t.prev);
+    d.querySelector('.lightbox__next').setAttribute('aria-label', t.next);
+    d.querySelectorAll('[data-lb-step]').forEach(function (b) { b.hidden = n < 2; });
+  }
+
+  function openPhoto(key) {
+    var parts = key.split(':');
+    var cat = MENUS.filter(function (c) { return c.id === parts[0]; })[0];
+    if (!cat) return;
+    if (!box.el) buildLightbox();
+    box.cat = cat;
+    showPhoto(photos().indexOf(cat.items[parseInt(parts[1], 10)]));
+    if (!box.el.open) box.el.showModal();
+  }
+
+  document.addEventListener('click', function (e) {
+    var z = e.target.closest('[data-zoom]');
+    if (z) openPhoto(z.getAttribute('data-zoom'));
+  });
 
   var currentId = null, watching = false, ticking = false;
   function setCurrent(id) {
