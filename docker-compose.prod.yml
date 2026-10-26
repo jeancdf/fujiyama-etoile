@@ -7,12 +7,20 @@ services:
     container_name: fujiyama-etoile
     restart: unless-stopped
     env_file: .env
-    # Pas encore de nom de domaine : le site est servi en HTTP sur ce port.
-    # Avec un domaine, retirer ce port et passer par le Caddy du serveur (HTTPS).
+    # Servi en HTTPS par le Caddy du serveur (https://fujiyama-proto.duckdns.org),
+    # qui joint ce conteneur par son nom sur le réseau partagé cv-proxy.
+    # Le port local ne sert qu'aux vérifications depuis le serveur lui-même.
     ports:
-      - "8095:3000"
+      - "127.0.0.1:8095:3000"
     volumes:
       - fujiyama_data:/data
+    networks:
+      - proxy
 
 volumes:
   fujiyama_data:
+
+networks:
+  proxy:
+    external: true
+    name: cv-proxy
